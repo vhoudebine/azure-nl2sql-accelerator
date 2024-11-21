@@ -1,0 +1,7 @@
+pyodbc
+sqlalchemy
+pandas
+openai==1.26.0
+python-dotenv
+tabulate
+azure-identity
