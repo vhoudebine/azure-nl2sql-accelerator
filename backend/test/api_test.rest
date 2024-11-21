@@ -1,0 +1,13 @@
+GET http://127.0.0.1:8000/api/test/ HTTP/1.1
+
+###
+
+GET http://127.0.0.1:8000/api/test/123 HTTP/1.1
+
+###
+
+POST http://127.0.0.1:8000/api/test/ HTTP/1.1
+
+{
+    "name": "test"
+}
