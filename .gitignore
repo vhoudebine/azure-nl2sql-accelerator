@@ -1,0 +1,11 @@
+# ROOT
+.env
+
+# FRONTEND
+
+# BACKEND
+/backend/.env
+/backend/.venv
+/backend/notes.txt
+/backend/src/__pycache__
+/backend/src/routers/__pycache__
