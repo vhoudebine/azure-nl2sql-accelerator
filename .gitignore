@@ -7,8 +7,9 @@
 /backend/.env
 /backend/.venv
 /backend/notes.txt
-/backend/src/__pycache__
-/backend/src/routers/__pycache__
+/backend/app/__pycache__
+/backend/app/routers/__pycache__
+/backend/app/routers/v1/__pycache__
 =======
 sqltoolkit/__pycache__/__init__.cpython-311.pyc
 sqltoolkit/__pycache__/connectors.cpython-311.pyc
