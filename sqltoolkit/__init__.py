@@ -1,2 +1,4 @@
 from .connectors import AzureSQLConnector, OdbcConnector
-from .dbutils import DatabaseUtils 
+from .client import DatabaseClient
+from .entities import TableColumn, Table
+from .prompts import *
