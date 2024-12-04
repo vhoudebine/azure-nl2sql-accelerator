@@ -8,6 +8,7 @@
 /backend/.venv
 /backend/notes.txt
 /backend/app/__pycache__
+/backend/app/internal/__pycache__
 /backend/app/routers/__pycache__
 /backend/app/routers/v1/__pycache__
 =======
