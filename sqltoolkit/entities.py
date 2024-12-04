@@ -51,7 +51,7 @@ class Table(BaseModel):
     embedding: Optional[Any] = Field(None, description="An embedding of the table")
 
     class Config:  
-        arbitrary_types_allowed = True 
+        arbitrary_types_allowed = True
   
     def get_table_description(self, aoai_client) -> str:  
         """Returns the description of the table."""
@@ -65,7 +65,7 @@ class Table(BaseModel):
 
         ===Table Schema
 
-        {self.json(exclude=['db_client'])}
+        {self.model_dump(exclude=['db_client'])}
 
         """
 
@@ -79,6 +79,40 @@ class Table(BaseModel):
         response_message = response.choices[0].message.content  
         
         self.description = response_message
+
+    def get_table_readable_name(self, aoai_client) -> str:
+        """Returns the business readable name of the table."""
+        table_name = self.name
+        table_readable_name_prompt = f"""
+        You are a data analyst that can help generate a business readable name for a SQL table. 
+        The table name is {table_name}. 
+
+        # YOU MUST FOLLOW THESE INSTRUCTIONS TO COMPLETE THIS TASK:
+        # You must generate a business readable name for this table. 
+        # The business readable name should be a short, descriptive name that is easy to understand and remember. 
+        # The business readable name should be 2-5 words long. 
+        # The business readable name should be in plain text without line breaks or special characters.
+        # Do not output anything other than the business readable name. Your answer should only contain the business readable name.
+
+        # Here are examples of table names and expected outputs:
+        - Table Name: "customer_info_table"
+        - Business Readable Name: "Customer Information"
+
+        ===Table Schema
+
+        {self.model_dump(exclude=['db_client'])}
+        """
+
+        messages = [{"role":"system", "content": "You are a data analyst that can help summarize SQL tables."}, 
+                    {"role": "user", "content": table_readable_name_prompt}]
+
+        response = aoai_client.chat.completions.create(
+                model="gpt-4o-global",
+                messages=messages)
+
+        response_message = response.choices[0].message.content  
+        
+        self.business_readable_name = response_message
 
     def get_columns(self, sql_client) -> List[TableColumn]:  
         """Returns the columns of the table."""  
