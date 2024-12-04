@@ -12,9 +12,9 @@ class TableColumn(BaseModel):
     sample_values: Optional[List[Any]] = Field(None, description="Sample values of the column")
     primary_key: bool = Field(False, description="Indicates if the column is a primary key")  
   
-    def get_column_values(self, dbclient, table_name) -> list:  
+    def get_column_values(self, sql_client, table_name) -> list:  
         """Populates the sample values for the column."""
-        values = json.loads(dbclient.get_column_values(table_name, self.name))
+        values = json.loads(sql_client.get_column_values(table_name, self.name))
         self.sample_values = [ val.get(self.name) for val in values if val.get(self.name) is not None]
     
     def get_llm_definition(self, table_json, aoai_client) -> str:
@@ -45,10 +45,10 @@ Do not include column values in the description
   
 class Table(BaseModel):  
     name: str = Field(..., description="The name of the table")
-    db_client: DatabaseClient = Field(..., description="The database client to use")
     business_readable_name: Optional[str] = Field(None, description="The business readable name of the table")  
     description: Optional[str] = Field(None, description="A description of the table")  
     columns: Optional[List[TableColumn]] = Field(None, description="The columns of the table")
+    embedding: Optional[Any] = Field(None, description="An embedding of the table")
 
     class Config:  
         arbitrary_types_allowed = True 
@@ -80,9 +80,9 @@ class Table(BaseModel):
         
         self.description = response_message
 
-    def get_columns(self) -> List[TableColumn]:  
+    def get_columns(self, sql_client) -> List[TableColumn]:  
         """Returns the columns of the table."""  
-        table_schema = json.loads(self.db_client.get_table_schema(self.name))
+        table_schema = json.loads(sql_client.get_table_schema(self.name))
         column_list = table_schema.get("Columns")
         
         self.columns = [TableColumn(
@@ -92,15 +92,16 @@ class Table(BaseModel):
             description=column["column_description"],
         ) for column in column_list]
     
-    def extract_column_values(self) -> None:  
+    def extract_column_values(self, sql_client) -> None:  
         """Extracts sample values for each column in the table."""  
         for column in self.columns:  
-            column.get_column_values(self.db_client, self.name)
+            column.get_column_values(sql_client, self.name)
 
     def extract_llm_column_definitions(self, aoai_client) -> None:
         """Extracts AI generated definitions for each column in the table."""
         table_json = self.json(exclude=['db_client'])
         for column in self.columns:
             column.get_llm_definition(table_json, aoai_client)
+    
 
   

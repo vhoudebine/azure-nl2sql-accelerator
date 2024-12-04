@@ -17,7 +17,7 @@ class DatabaseClient:
         return df  
   
     def list_database_tables(self) -> str:  
-        query = "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE'"  
+        query = "SELECT TABLE_SCHEMA + '.' + TABLE_NAME AS TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE'"  
         df = pd.read_sql(query, self.connection)  
         return json.dumps(df.to_dict(orient='records'))  
   
