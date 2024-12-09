@@ -11,6 +11,9 @@
 /backend/app/internal/__pycache__
 /backend/app/routers/__pycache__
 /backend/app/routers/v1/__pycache__
+# BACKEDN RELATED
+/dev-mine.ipynb
+.venv
 =======
 sqltoolkit/__pycache__/__init__.cpython-311.pyc
 sqltoolkit/__pycache__/connectors.cpython-311.pyc

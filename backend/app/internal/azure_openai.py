@@ -18,8 +18,6 @@ class AzureOpenAIService:
         self.deployment_name = deployment_name
         self.system_prompt = "You Are helpful assistant."
 
-        
-
     def close(self):
         self.client.close()
         self.stream_client.close()
