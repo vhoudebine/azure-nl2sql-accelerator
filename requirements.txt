@@ -5,3 +5,4 @@ openai==1.26.0
 python-dotenv
 tabulate
 azure-identity
+azure-search-documents==11.6.0b7
