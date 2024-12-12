@@ -17,7 +17,7 @@ class TableColumn(BaseModel):
         values = json.loads(sql_client.get_column_values(table_name, self.name))
         self.sample_values = [ val.get(self.name) for val in values if val.get(self.name) is not None]
     
-    def get_llm_definition(self, table_json, aoai_client) -> str:
+    def get_llm_definition(self, table_json, aoai_client, aoai_deployment) -> str:
         """Returns the description of the column from the LLM."""
         prompt = f"""
 You are an expert in SQL Entity analysis. You must generate a brief definition for this SQL Column. This definition will be used to generate a SQL query with the correct values. Make sure to include a definition of the data contained in this column.
@@ -36,7 +36,7 @@ Do not include column values in the description
         {"role": "user", "content": prompt}]
 
         response = aoai_client.chat.completions.create(
-                model="gpt-4o-global",
+                model=aoai_deployment,
                 messages=messages)
         
         response_message = response.choices[0].message.content
@@ -53,7 +53,7 @@ class Table(BaseModel):
     class Config:  
         arbitrary_types_allowed = True
   
-    def get_table_description(self, aoai_client) -> str:  
+    def get_table_description(self, aoai_client, aoai_deployment) -> str:  
         """Returns the description of the table."""
 
         table_summary_prompt = f"""
@@ -73,14 +73,14 @@ class Table(BaseModel):
                     {"role": "user", "content": table_summary_prompt}]
 
         response = aoai_client.chat.completions.create(
-                model="gpt-4o-global",
+                model=aoai_deployment,
                 messages=messages)
 
         response_message = response.choices[0].message.content  
         
         self.description = response_message
 
-    def get_table_readable_name(self, aoai_client) -> str:
+    def get_table_readable_name(self, aoai_client, aoai_deployment) -> str:
         """Returns the business readable name of the table."""
         table_name = self.name
         table_readable_name_prompt = f"""
@@ -107,7 +107,7 @@ class Table(BaseModel):
                     {"role": "user", "content": table_readable_name_prompt}]
 
         response = aoai_client.chat.completions.create(
-                model="gpt-4o-global",
+                model=aoai_deployment,
                 messages=messages)
 
         response_message = response.choices[0].message.content  
@@ -131,11 +131,11 @@ class Table(BaseModel):
         for column in self.columns:  
             column.get_column_values(sql_client, self.name)
 
-    def extract_llm_column_definitions(self, aoai_client) -> None:
+    def extract_llm_column_definitions(self, aoai_client, aoai_deployment) -> None:
         """Extracts AI generated definitions for each column in the table."""
         table_json = self.json(exclude=['db_client'])
         for column in self.columns:
-            column.get_llm_definition(table_json, aoai_client)
+            column.get_llm_definition(table_json, aoai_client, aoai_deployment)
     
 
   

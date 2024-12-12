@@ -5,6 +5,7 @@ from azure.identity import DefaultAzureCredential
 
 class AzureSQLConnector:
     def __init__(self, server: str, database: str, use_entra_id: bool = True, username: str = None, password: str = None):
+        self.type = 'AZURE_SQL'
         self.use_entra_id = use_entra_id
         if use_entra_id:
             self.connection_string = f'Driver={{ODBC Driver 18 for SQL Server}};Server=tcp:{server},1433;Database={database};Encrypt=yes;TrustServerCertificate=no;Connection Timeout=30;'
@@ -29,6 +30,7 @@ class AzureSQLConnector:
 
 class OdbcConnector:
     def __init__(self, connection_string: str):
+        self.type = 'ODBC'
         self.connection_string = connection_string
 
     def get_conn(self):
