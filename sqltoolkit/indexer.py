@@ -24,9 +24,10 @@ from azure.identity import DefaultAzureCredential
 from azure.core.credentials import AzureKeyCredential
 
 class DatabaseIndexer:
-    def __init__(self, client, openai_client):
+    def __init__(self, client, openai_client, aoai_deployment):
         self.client = client
         self.openai_client = openai_client
+        self.aoai_deployment = aoai_deployment
 
         self.logger = logging.getLogger(self.__class__.__name__)
         self.logger.setLevel(logging.INFO)
@@ -51,9 +52,9 @@ class DatabaseIndexer:
             table = Table(name=table_name)
             table.get_columns(self.client)
             table.extract_column_values(self.client)
-            table.extract_llm_column_definitions(self.openai_client)
-            table.get_table_description(self.openai_client)
-            table.get_table_readable_name(self.openai_client)
+            table.extract_llm_column_definitions(self.openai_client, self.aoai_deployment)
+            table.get_table_description(self.openai_client, self.aoai_deployment)
+            table.get_table_readable_name(self.openai_client, self.aoai_deployment)
             table_manifests.append(table)
             self.logger.info(f"Completed processing table: {table_name}")
 
@@ -64,7 +65,7 @@ class DatabaseIndexer:
     
     def generate_table_embeddings(self):
         for table in self.tables:
-            table.embedding =  self.openai_client.embeddings.create(input=[table.description], model="text-embedding-3-small").data[0].embedding
+            table.embedding =  self.openai_client.embeddings.create(input=[table.description], model=self.embedding).data[0].embedding
     
     def export_json_manifest(self):
         return json.dumps(
