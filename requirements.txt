@@ -1,8 +1,10 @@
+fastapi[standard]
+openai==1.57.1
+python-dotenv
 pyodbc
 sqlalchemy
 pandas
-openai==1.26.0
-python-dotenv
 tabulate
 azure-identity
 azure-search-documents==11.6.0b7
+psycopg2-binary

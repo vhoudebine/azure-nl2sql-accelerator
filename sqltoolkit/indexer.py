@@ -22,12 +22,15 @@ from azure.search.documents.indexes.models import (
 )
 from azure.identity import DefaultAzureCredential
 from azure.core.credentials import AzureKeyCredential
+import re
 
 class DatabaseIndexer:
-    def __init__(self, client, openai_client, aoai_deployment):
+    def __init__(self, client, openai_client, aoai_deployment, embedding="text-embedding-3-small", extra_context=None):
         self.client = client
         self.openai_client = openai_client
         self.aoai_deployment = aoai_deployment
+        self.embedding = embedding
+        self.extra_context = extra_context
 
         self.logger = logging.getLogger(self.__class__.__name__)
         self.logger.setLevel(logging.INFO)
@@ -38,23 +41,31 @@ class DatabaseIndexer:
         self.logger.addHandler(handler)
         self.logger.propagate = False
 
-    def fetch_and_describe_tables(self, table_list: list = None):
+    def fetch_and_describe_tables(self, table_list: list = None, regex_filter: str = None):
+
         self.logger.info("Fetching tables from the database.")
         tables = json.loads(self.client.list_database_tables())
+        
         if table_list:
             tables = [table.get('TABLE_NAME') for table in tables if table.get('TABLE_NAME') in table_list]
-            self.logger.info(f"Filtered tables: {tables}")
+            self.logger.info(f"Filtered tables by list: {tables}")
+        else:
+            tables = [table_dict.get('TABLE_NAME') for table_dict in tables]
+        
+        if regex_filter:
+            pattern = re.compile(regex_filter)
+            tables = [table for table in tables if pattern.match(table)]
+            self.logger.info(f"Filtered tables by regex: {tables}")
 
         table_manifests = []
-        for table_dict in tables:
-            table_name = table_dict.get('TABLE_NAME')
+        for table_name in tables:
             self.logger.info(f"Processing table: {table_name}")
             table = Table(name=table_name)
             table.get_columns(self.client)
             table.extract_column_values(self.client)
-            table.extract_llm_column_definitions(self.openai_client, self.aoai_deployment)
-            table.get_table_description(self.openai_client, self.aoai_deployment)
-            table.get_table_readable_name(self.openai_client, self.aoai_deployment)
+            table.extract_llm_column_definitions(self.openai_client, self.aoai_deployment, self.extra_context)
+            table.get_table_description(self.openai_client, self.aoai_deployment, self.extra_context)
+            table.get_table_readable_name(self.openai_client, self.aoai_deployment, self.extra_context)
             table_manifests.append(table)
             self.logger.info(f"Completed processing table: {table_name}")
 

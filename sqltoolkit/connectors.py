@@ -2,6 +2,8 @@
 import struct
 import pyodbc
 from azure.identity import DefaultAzureCredential
+import psycopg2
+from psycopg2 import OperationalError
 
 class AzureSQLConnector:
     def __init__(self, server: str, database: str, use_entra_id: bool = True, username: str = None, password: str = None):
@@ -27,6 +29,18 @@ class AzureSQLConnector:
             return conn
         except pyodbc.Error as e:
             raise RuntimeError(f"Error connecting to Azure SQL Database: {e}")
+        
+class PostgreSQLConnector:
+    def __init__(self, host: str, database: str, username: str, password: str, port: int = 5432):
+        self.type = 'POSTGRESQL'
+        self.connection_string = f"dbname='{database}' user='{username}' password='{password}' host='{host}' port='{port}'"
+
+    def get_conn(self):
+        try:
+            conn = psycopg2.connect(self.connection_string)
+            return conn
+        except OperationalError as e:
+            raise RuntimeError(f"Error connecting to PostgreSQL Database: {e}")
 
 class OdbcConnector:
     def __init__(self, connection_string: str):

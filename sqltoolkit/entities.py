@@ -17,12 +17,14 @@ class TableColumn(BaseModel):
         values = json.loads(sql_client.get_column_values(table_name, self.name))
         self.sample_values = [ val.get(self.name) for val in values if val.get(self.name) is not None]
     
-    def get_llm_definition(self, table_json, aoai_client, aoai_deployment) -> str:
+    def get_llm_definition(self, table_json, aoai_client, aoai_deployment, extra_context) -> str:
         """Returns the description of the column from the LLM."""
         prompt = f"""
 You are an expert in SQL Entity analysis. You must generate a brief definition for this SQL Column. This definition will be used to generate a SQL query with the correct values. Make sure to include a definition of the data contained in this column.
 
 The definition should be a brief summary of the column as a whole. The definition should be 3-5 sentences long. Apply NO formatting to the definition. The definition should be in plain text without line breaks or special characters.
+## Please use this additional context about the database provided to help make the business readable name more accurate:
+{extra_context}
 
 You will use this definition later to generate a SQL query. Make sure it will be useful for this purpose in determining the values that should be used in the query and any filtering that should be applied.
 Do not include column values in the description
@@ -53,11 +55,14 @@ class Table(BaseModel):
     class Config:  
         arbitrary_types_allowed = True
   
-    def get_table_description(self, aoai_client, aoai_deployment) -> str:  
+    def get_table_description(self, aoai_client, aoai_deployment, extra_context) -> str:  
         """Returns the description of the table."""
 
         table_summary_prompt = f"""
         You must generate a brief definition of the table below. The definition will be used to generate a SQL query based on input questions.
+        
+        ## Please use this additional context about the database provided to help make the business readable name more accurate:
+        {extra_context}
 
         DO NOT list the columns in the definition. The columns will be listed separately. The definition should be a brief summary of the entity as a whole.
 
@@ -80,12 +85,15 @@ class Table(BaseModel):
         
         self.description = response_message
 
-    def get_table_readable_name(self, aoai_client, aoai_deployment) -> str:
+    def get_table_readable_name(self, aoai_client, aoai_deployment, extra_context) -> str:
         """Returns the business readable name of the table."""
         table_name = self.name
         table_readable_name_prompt = f"""
         You are a data analyst that can help generate a business readable name for a SQL table. 
         The table name is {table_name}. 
+
+        ## This is additional context about the database provided to help make the business readable name more accurate:
+        {extra_context}
 
         # YOU MUST FOLLOW THESE INSTRUCTIONS TO COMPLETE THIS TASK:
         # You must generate a business readable name for this table. 
