@@ -1,6 +1,7 @@
 import json  
 import pandas as pd
 import warnings
+from sqltoolkit import sql_queries
 
 warnings.filterwarnings('ignore')
   
@@ -16,8 +17,8 @@ class DatabaseClient:
                 df[column] = df[column].astype(str)  
         return df  
   
-    def list_database_tables(self) -> str:  
-        query = "SELECT TABLE_SCHEMA + '.' + TABLE_NAME AS TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE'"  
+    def list_database_tables(self) -> str:
+        query = sql_queries.get_query(self.connector.type, 'list_database_tables')
         df = pd.read_sql(query, self.connection)  
         return json.dumps(df.to_dict(orient='records'))  
   
@@ -27,59 +28,18 @@ class DatabaseClient:
         return json.dumps(df.to_dict(orient='records'))  
   
     def get_table_schema(self, table_name: str) -> str:  
-        query = f"""SELECT  
-    c.COLUMN_NAME as name,  
-    c.DATA_TYPE as type,  
-    c.IS_NULLABLE as is_nullable,  
-    CAST(ep.value AS VARCHAR) AS column_description,  
-    CASE  
-        WHEN tc.CONSTRAINT_TYPE = 'PRIMARY KEY' THEN 'PRIMARY KEY'  
-        WHEN tc.CONSTRAINT_TYPE = 'FOREIGN KEY' THEN 'FOREIGN KEY'  
-        ELSE NULL  
-    END AS key_type,  
-    fk.referenced_table_name AS foreign_table,  
-    fk.referenced_column_name AS foreign_column  
-FROM  
-    INFORMATION_SCHEMA.COLUMNS c  
-LEFT JOIN  
-    sys.columns sc ON sc.object_id = OBJECT_ID(c.TABLE_NAME) AND sc.name = c.COLUMN_NAME  
-LEFT JOIN  
-    sys.extended_properties ep ON ep.major_id = sc.object_id AND ep.minor_id = sc.column_id AND ep.name = 'MS_Description'  
-LEFT JOIN  
-    INFORMATION_SCHEMA.KEY_COLUMN_USAGE kcu ON c.TABLE_NAME = kcu.TABLE_NAME AND c.COLUMN_NAME = kcu.COLUMN_NAME  
-LEFT JOIN  
-    INFORMATION_SCHEMA.TABLE_CONSTRAINTS tc ON tc.TABLE_NAME = kcu.TABLE_NAME AND tc.CONSTRAINT_NAME = kcu.CONSTRAINT_NAME  
-LEFT JOIN  
-    (SELECT  
-         fkc.parent_column_id,  
-         fk.parent_object_id,  
-         fk.name AS constraint_name,  
-         fk.referenced_object_id,  
-         OBJECT_NAME(fk.referenced_object_id) AS referenced_table_name,  
-         COL_NAME(fkc.referenced_object_id, fkc.referenced_column_id) AS referenced_column_name  
-     FROM  
-         sys.foreign_keys fk  
-     INNER JOIN  
-         sys.foreign_key_columns fkc ON fk.object_id = fkc.constraint_object_id) fk  
-    ON fk.parent_object_id = OBJECT_ID(c.TABLE_NAME) AND fk.parent_column_id = sc.column_id  
-WHERE  
-    c.TABLE_SCHEMA+'.'+c.TABLE_NAME = '{table_name}' 
-ORDER BY  
-    c.TABLE_NAME, c.ORDINAL_POSITION; """
+        query = sql_queries.get_query(self.connector.type, 'get_table_schema', table_name=table_name)
         df = pd.read_sql(query, self.connection)  
         return json.dumps({'Columns':df.to_dict(orient='records')})  
   
     def get_table_rows(self, table_name: str) -> str:  
-        query = f"SELECT TOP 3 * FROM {table_name}"  
+        query = sql_queries.get_query(self.connector.type, 'get_table_rows', table_name=table_name) 
         df = pd.read_sql(query, self.connection)  
         df = self.convert_datetime_columns_to_string(df)  
         return df.to_markdown()  
   
     def get_column_values(self, table_name: str, column_name: str) -> str:  
-        query = f"""SELECT DISTINCT TOP 10 
-        {column_name} 
-        FROM {table_name} 
-        ORDER BY {column_name}"""
+        query = sql_queries.get_query(self.connector.type, 'get_column_values', table_name=table_name, column_name=column_name)
         try:  
             df = pd.read_sql(query, self.connection)  
             df = self.convert_datetime_columns_to_string(df)  
