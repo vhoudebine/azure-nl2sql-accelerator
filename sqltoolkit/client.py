@@ -44,7 +44,8 @@ class DatabaseClient:
             df = pd.read_sql(query, self.connection)  
             df = self.convert_datetime_columns_to_string(df)  
             return json.dumps(df.to_dict(orient='records'))
-        except:
+        except Exception as e:
+            print(e)
             return json.dumps([{column_name:None}])
     
     def get_available_tools(self) -> str:

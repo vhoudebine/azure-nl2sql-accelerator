@@ -104,9 +104,9 @@ ORDER BY
 
     'get_column_values': lambda table_name, column_name: f"""
     SELECT DISTINCT 
-        {column_name} 
-    FROM {table_name} 
-    ORDER BY {column_name}
+        "{column_name}"
+    FROM {table_name}
+    ORDER BY "{column_name}"
     LIMIT 10"""
 }
 
