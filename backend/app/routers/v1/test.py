@@ -2,6 +2,9 @@ import sys
 import os
 import time
 import threading
+from azure.core.credentials import AzureKeyCredential
+# from azure.search.documents import SearchClient
+from azure.search.documents.indexes import SearchIndexClient
 from fastapi import APIRouter, BackgroundTasks, Request, HTTPException
 from fastapi.responses import StreamingResponse
 
@@ -14,6 +17,7 @@ def cpu_intensive_task(param):
         time.sleep(1)
     
     task_lock.release()
+
 
 router = APIRouter(
     prefix="/test",
@@ -36,7 +40,6 @@ async def get_task_status():
     if task_lock.locked():
         raise HTTPException(status_code=423, detail="Task is already running")
     return {"message": "Task is not running"}
-
 
 # POST
 
@@ -73,4 +76,3 @@ async def long_running_task(background_tasks: BackgroundTasks, param: int):
         if task_lock.locked():
             task_lock.release()
         raise HTTPException(status_code=500, detail="Error starting task")
-

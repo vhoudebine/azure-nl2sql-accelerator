@@ -32,25 +32,25 @@ async def lifespan(app: FastAPI):
             api_key=os.getenv("AZURE_OPENAI_API_KEY"),
             deployment_name=os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME")
         )
-        # adding database connection here
-        db_type = os.getenv("DATABASE_TYPE")
-        db_client = None
-        # checking if database is azure sql server while ignoring case
-        if db_type.lower() == "azuresql":
-            sql_db = connectors.AzureSQLConnector(
-                server=os.getenv("AZURE_SQL_SERVER"),
-                database=os.getenv("AZURE_SQL_DATABASE"),
-                username=os.getenv("AZURE_SQL_USER"),
-                password=os.getenv("AZURE_SQL_PASSWORD"),
-                use_entra_id=False
-            )
-            db_client = client.DatabaseClient(sql_db)
-        # elif db_type.lower() == "sqlite":
-        #     raise ValueError("Database type not supported YET")
-        else:
-            raise ValueError("Database type not supported")
+        # # adding database connection here
+        # db_type = os.getenv("DATABASE_TYPE")
+        # db_client = None
+        # # checking if database is azure sql server while ignoring case
+        # if db_type.lower() == "azuresql":
+        #     sql_db = connectors.AzureSQLConnector(
+        #         server=os.getenv("AZURE_SQL_SERVER"),
+        #         database=os.getenv("AZURE_SQL_DATABASE"),
+        #         username=os.getenv("AZURE_SQL_USER"),
+        #         password=os.getenv("AZURE_SQL_PASSWORD"),
+        #         use_entra_id=False
+        #     )
+        #     db_client = client.DatabaseClient(sql_db)
+        # # elif db_type.lower() == "sqlite":
+        # #     raise ValueError("Database type not supported YET")
+        # else:
+        #     raise ValueError("Database type not supported")
 
-        app.state.db_client = db_client
+        # app.state.db_client = db_client
         yield
     finally:
         print("Shutting down...")
