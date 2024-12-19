@@ -2,7 +2,93 @@
 Accelerator to interact with database in natural language
 
 ## Sqltoolkit
-detail description of sqltoolkit tba
+`sqltoolkit` is a Python library for interacting with SQL databases, providing tools for connecting to databases, executing queries, and indexing data for Azure AI Search.
+
+### Features
+
+- Connect to Azure SQL, PostgreSQL, and other ODBC-compatible databases.
+- Execute SQL queries and retrieve results.
+- Extract schema and sample data from database tables.
+- Generate AI-based descriptions for tables and columns.
+- Integrate with Azure AI Search.
+
+### Installation
+
+```sh
+pip install -r requirements.txt
+```
+
+### Usage
+
+#### Connecting to a Database
+
+```python
+from sqltoolkit.connectors import AzureSQLConnector, PostgreSQLConnector
+from sqltoolkit.client import DatabaseClient
+
+# Azure SQL Connection
+azure_connector = AzureSQLConnector(server='your_server', database='your_database')
+sql_client = DatabaseClient(azure_connector)
+
+# PostgreSQL Connection
+postgres_connector = PostgreSQLConnector(host='your_host', database='your_database', user='your_user', password='your_password')
+sql_client = DatabaseClient(postgres_connector)
+```
+
+#### Executing Queries
+
+```python
+# List database tables
+tables = sql_client.list_database_tables()
+print(tables)
+
+# Execute a custom query
+query_result = sql_client.query("SELECT * FROM your_table LIMIT 10")
+print(query_result)
+```
+
+#### Indexing Data for Azure AI Search
+
+```python
+from sqltoolkit.indexer import DatabaseIndexer
+from azure.identity import DefaultAzureCredential
+
+# Initialize the indexer
+indexer = DatabaseIndexer(client=sql_client, openai_client=openai_client, aoai_deployment='your_deployment')
+
+# Fetch and describe tables
+table_manifests = indexer.fetch_and_describe_tables()
+
+# Generate table embeddings
+indexer.generate_table_embeddings()
+
+# Export JSON manifest
+json_manifest = indexer.export_json_manifest()
+with open('tables_manifest.json', 'w') as f:
+    f.write(json_manifest)
+
+# Create Azure AI Search index
+indexer.create_azure_ai_search_index(
+    search_endpoint='your_search_endpoint',
+    search_credential='your_search_credential',
+    index_name='your_index_name',
+    openai_endpoint='your_openai_endpoint',
+    openai_key='your_openai_key',
+    embedding_deployment='your_embedding_deployment'
+)
+
+# Push data to Azure AI Search
+indexer.push_to_ai_search()
+```
+
+### Modules
+
+- `connectors.py`: Database connectors for Azure SQL, PostgreSQL, and ODBC-compatible databases.
+- `client.py`: `DatabaseClient` class for executing queries and retrieving results.
+- `entities.py`: `Table` and `TableColumn` classes for representing database table metadata.
+- `indexer.py`: `DatabaseIndexer` class for indexing data and integrating with Azure AI Search.
+- `sql_queries.py`: Predefined SQL queries for different database types.
+- `prompts.py`: Prompts for generating AI-based descriptions for tables and columns.
 
 ## Backend
 the backend is written in python fastapi.\
