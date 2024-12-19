@@ -8,6 +8,7 @@
 /frontend/streamlit/.env
 /frontend/streamlit/.venv
 /frontend/streamlit/bak
+/frontend/streamlit/function/__pycache__
 # FRONTEND RELATED
 
 # BACKEND

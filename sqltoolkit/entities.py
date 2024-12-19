@@ -139,11 +139,11 @@ class Table(BaseModel):
         for column in self.columns:  
             column.get_column_values(sql_client, self.name)
 
-    def extract_llm_column_definitions(self, aoai_client, aoai_deployment) -> None:
+    def extract_llm_column_definitions(self, aoai_client, aoai_deployment, extra_context) -> None:
         """Extracts AI generated definitions for each column in the table."""
         table_json = self.json(exclude=['db_client'])
         for column in self.columns:
-            column.get_llm_definition(table_json, aoai_client, aoai_deployment)
+            column.get_llm_definition(table_json, aoai_client, aoai_deployment, extra_context)
     
 
   

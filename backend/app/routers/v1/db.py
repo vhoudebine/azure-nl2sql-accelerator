@@ -4,6 +4,7 @@ import re
 import time
 from threading import Lock
 from azure.core.credentials import AzureKeyCredential
+from azure.core.exceptions import ResourceNotFoundError
 from openai import AzureOpenAI, AsyncAzureOpenAI
 from azure.search.documents.indexes import SearchIndexClient
 # from azure.search.documents.models import QueryType, QueryCaptionType, QueryAnswerType
@@ -23,11 +24,17 @@ internal_indexer = None
 status_text = ""
 
 def get_status_of_index_database():
-    logger = internal_indexer.logger
-    return logger.get_status()
-
+    # this may change to pull status text from internal_indexer
+    log_message = ""
+    return log_message
 
 def background_index_database(aoai_info, search_info, db_info):
+
+    print("Running background task")
+    print(aoai_info)
+    print(search_info)
+    print(db_info)
+
     global internal_indexer
     global status_text
 
@@ -62,7 +69,8 @@ def background_index_database(aoai_info, search_info, db_info):
         internal_indexer = indexer.DatabaseIndexer(
             client=db_client,
             openai_client=aoai_client,
-            aoai_deployment=aoai_info.get("model_deployment")
+            aoai_deployment=aoai_info.get("model_deployment"),
+            embedding=aoai_info.get("embedding_deployment")
         )
 
     manifest = internal_indexer.fetch_and_describe_tables()
@@ -76,7 +84,7 @@ def background_index_database(aoai_info, search_info, db_info):
     search_key = search_info.get("api_key")
     embedding_deployment = aoai_info.get("embedding_deployment")
     aoai_endpoint = aoai_info.get("endpoint")
-    aoai_key =  aoai_info.get("api_key")
+    aoai_key = aoai_info.get("api_key")
 
     aisearch_index = search_info.get("index_name")
 
@@ -96,6 +104,14 @@ def background_index_database(aoai_info, search_info, db_info):
     # release the lock
     task_lock.release()
 
+def background_index_database_test(aoai_info, search_info, db_info):
+    print("Running background task")
+    print(aoai_info)
+    print(search_info)
+    print(db_info)
+    time.sleep(30)
+    task_lock.release()
+
 def check_ai_search_index(search_endpoint, search_key, search_index):
     search_index_client = SearchIndexClient(
         endpoint=search_endpoint, 
@@ -108,19 +124,25 @@ def check_ai_search_index(search_endpoint, search_key, search_index):
         results = index_client.search(search_text="*", top=1)
         if not any(results):
             print("Index exists but has no data.")
-            return False
+            return "missing_index_data"
         
-        return True
+        return "ready"
+    
+    except ResourceNotFoundError as e:
+        print(f"Index does not exist: {str(e)}")
+        return "index_not_found"
+
     except Exception as e:
         print(f"An error occurred: {str(e)}")
         
-    return False
+    return "error"
 
 # ROUTER
 router = APIRouter(
     prefix="/db",
     tags=["db"],
 )
+
 
 # GET
 
@@ -139,28 +161,64 @@ async def get_task_status():
         raise HTTPException(status_code=423, detail="Task is already running")
     return {"message": "Task is not running"}
 
+
 # POST
 
 @router.post("/index-status")
-async def post_test_aoai(obj: dict, request: Request):
+async def post_index_status(obj: dict):
     # checking thread lock first
     if task_lock.locked():
         raise HTTPException(status_code=423, detail="Indexing is already running")
 
     # checking if obj has search_endpoint, search_key, search_index
-    if not obj.get("search_endpoint") or not obj.get("search_key") or not obj.get("search_index"):
+    if not obj.get("endpoint") or not obj.get("api_key") or not obj.get("index_name"):
         raise HTTPException(status_code=400, detail="Missing required body parameters")
 
     index_status = check_ai_search_index(
-        search_endpoint=obj.get("search_endpoint"),
-        search_key=obj.get("search_key"),
-        search_index=obj.get("search_index")
+        search_endpoint=obj.get("endpoint"),
+        search_key=obj.get("api_key"),
+        search_index=obj.get("index_name")
     )
-    if not index_status:
-        # throwing 404 error
-        raise HTTPException(status_code=404, detail="Index does not exist or has no data")
-    return {"message": "Index exist and is ready"}
 
+    if index_status == "ready":
+        return {"message": "Index exist and is ready"}
+    
+    if index_status == "index_not_found":
+        raise HTTPException(status_code=404, detail="Index does not exist or has no data")
+    
+    if index_status == "missing_index_data":
+        raise HTTPException(status_code=404, detail="Index exists but has no data")
+    
+    raise HTTPException(status_code=400, detail="Error checking index status, check credentials")
+    
+@router.post("/index-database-test", status_code=202)
+async def index_database(obj: dict, request: Request, background_tasks: BackgroundTasks):
+    # checking if task_lock is locked
+    if task_lock.locked():
+        raise HTTPException(status_code=423, detail="Indexing is already running")
+    
+    # checking if obj has aoai_info
+    if not obj.get("aoai_info"):
+        raise HTTPException(status_code=400, detail="Missing required body parameters")
+    aoai_info = obj.get("aoai_info")
+
+    # checking if obj has search_info
+    if not obj.get("aisearch_info"):
+        raise HTTPException(status_code=400, detail="Missing required body parameters")
+    search_info = obj.get("aisearch_info")
+
+    # checking if obj has db_info
+    if not obj.get("db_info"):
+        raise HTTPException(status_code=400, detail="Missing required body parameters")
+    db_info = obj.get("db_info")
+
+    try:
+        task_lock.acquire(blocking=False)
+        background_tasks.add_task(background_index_database_test, aoai_info, search_info, db_info)
+    except:
+        if task_lock.locked():
+            task_lock.release()
+        raise HTTPException(status_code=500, detail="Error starting task")
 
 @router.post("/index-database", status_code=202)
 async def index_database(obj: dict, request: Request, background_tasks: BackgroundTasks):
@@ -168,11 +226,6 @@ async def index_database(obj: dict, request: Request, background_tasks: Backgrou
     if task_lock.locked():
         raise HTTPException(status_code=423, detail="Indexing is already running")
     
-     # init subset_table as empty json array
-    # subset_table = []
-    # if obj.get("subset_table"):
-    #     subset_table = obj.get("subset_table")
-
     # checking if obj has aoai_info
     if not obj.get("aoai_info"):
         raise HTTPException(status_code=400, detail="Missing required body parameters")

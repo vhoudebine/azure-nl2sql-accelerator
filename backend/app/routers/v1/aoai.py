@@ -4,22 +4,72 @@ import time
 import json
 from fastapi import APIRouter, BackgroundTasks, Request, HTTPException
 from fastapi.responses import StreamingResponse
+from openai import AzureOpenAI, AsyncAzureOpenAI
 from azure.search.documents import SearchClient
 from azure.search.documents.models import QueryType, QueryCaptionType, QueryAnswerType
 from azure.search.documents.models import VectorizableTextQuery
 from azure.core.credentials import AzureKeyCredential
 
+search_client = None
+aoai_client = None
 
-def get_search_docs(user_question: str):
-    search_endpoint = os.getenv('AZURE_AI_SEARCH_ENDPOINT')
-    search_key = os.getenv('AZURE_AI_SEARCH_API_KEY')
-    index_name = 'adventureworks'
+def prompt_rewriting(aoai_info, user_question: str):
 
-    search_client = SearchClient(
-        endpoint=search_endpoint, 
-        credential=AzureKeyCredential(search_key), 
-        index_name=index_name
-    )
+    global aoai_client
+    model_deployment = aoai_info.get("model_deployment")
+    if aoai_client is None:
+        print("creating aoai client")
+        aoai_client = AzureOpenAI(
+            azure_endpoint=aoai_info.get("endpoint"),
+            api_key=aoai_info.get("api_key"),
+            api_version="2024-06-01"
+        )
+
+
+    rewriter_prompt = f"""
+    You are a helpful AI SQL Agent. Your role is to help people translate their questions 
+    into better questions that can be translated into SQL queries.
+    You should disimbiguate the question and provide a more specific version of the question to the best of your ability
+    You should rewrite the question in a way that is more likely to be answered by the database.
+
+    You must only return a single sentence that is a better version of the user's question.
+
+    """
+
+    messages =[
+        {
+            "role": "system",
+            "content": rewriter_prompt
+        },
+        {
+            "role": "user",
+            "content": user_question
+        }
+    ]
+
+    rewriter_response = aoai_client.chat.completions.create(
+                    model=model_deployment,
+                    messages=messages,
+                )
+
+    rewriter_response = rewriter_response.choices[0].message.content
+    return rewriter_response
+
+def get_search_docs(aisearch_info, user_question: str):
+
+    global search_client
+
+    if search_client is None:
+        print("creating search client")
+        search_endpoint = aisearch_info.get("endpoint")
+        search_key = aisearch_info.get("api_key")
+        index_name = aisearch_info.get("index_name")
+
+        search_client = SearchClient(
+            endpoint=search_endpoint, 
+            credential=AzureKeyCredential(search_key), 
+            index_name=index_name
+        )
 
     vector_query = VectorizableTextQuery(text=user_question, k_nearest_neighbors=50, fields="embedding")
 
@@ -43,8 +93,17 @@ def get_search_docs(user_question: str):
 
     return candidate_tables
 
+def sql_query_from_llm(aoai_info, tables_prompt, user_question):
 
-def sql_query_from_llm(openai_client, tables_prompt, user_question):
+    global aoai_client
+    model_deployment = aoai_info.get("model_deployment")
+    if aoai_client is None:
+        print("creating aoai client")
+        aoai_client = AzureOpenAI(
+            azure_endpoint=aoai_info.get("endpoint"),
+            api_key=aoai_info.get("api_key"),
+            api_version="2024-06-01"
+        )
 
     system_prompt = f"""
     You are a helpful AI data analyst assistant, 
@@ -84,8 +143,8 @@ def sql_query_from_llm(openai_client, tables_prompt, user_question):
         }
     ]
 
-    response = openai_client.chat.completions.create(
-                    model="gpt-4o-global",
+    response = aoai_client.chat.completions.create(
+                    model=model_deployment,
                     messages=messages,
                     response_format={"type": "json_object"}
                 )
@@ -112,18 +171,27 @@ def get_sql_query(obj: dict, request: Request):
     # checking if obj has user_prompt key and it is not empty, throw error if not
     if "user_question" not in obj or obj["user_question"] == "":
         raise HTTPException(status_code=400, detail="User question cannot be empty")
+    user_question = obj.get("user_question")
+
+    # checking if obj has aoai_info
+    if not obj.get("aoai_info"):
+        raise HTTPException(status_code=400, detail="Missing required body parameters")
+    aoai_info = obj.get("aoai_info")
+
+    # checking if obj has search_info
+    if not obj.get("aisearch_info"):
+        raise HTTPException(status_code=400, detail="Missing required body parameters")
+    aisearch_info = obj.get("aisearch_info")
     
-    # user_question = obj["user_question"]
-    # overriding for test
-    user_question = "What is the first name of the customer that put in the most orders?"
+    # rewriting user question
+    updated_user_question = prompt_rewriting(aoai_info=aoai_info, user_question=user_question)
+    print(updated_user_question)
 
-    search_docs = get_search_docs(user_question)
-    # print(search_docs)
+    search_docs = get_search_docs(aisearch_info=aisearch_info, user_question=updated_user_question)
+    print(len(search_docs))
 
-    # loading client from state
-    aoai_client = request.app.state.aoai_client
-    openai_client = aoai_client.client
-    result = sql_query_from_llm(openai_client=openai_client, tables_prompt=search_docs, user_question=user_question)
+    result = sql_query_from_llm(aoai_info=aoai_info, tables_prompt=search_docs, user_question=updated_user_question)
+    print(result)
     return result
     
 

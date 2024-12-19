@@ -31,7 +31,7 @@ class DatabaseIndexer:
         self.aoai_deployment = aoai_deployment
         self.embedding = embedding
         self.extra_context = extra_context
-
+        
         self.logger = logging.getLogger(self.__class__.__name__)
         self.logger.setLevel(logging.INFO)
         handler = logging.StreamHandler()
