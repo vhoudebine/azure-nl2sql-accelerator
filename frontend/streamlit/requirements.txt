@@ -1,0 +1,9 @@
+pyodbc
+sqlalchemy
+streamlit
+pandas
+openai==1.57.1
+python-dotenv
+tabulate
+streamlit-audiorecorder
+azure-identity
