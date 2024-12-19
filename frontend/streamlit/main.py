@@ -19,13 +19,7 @@ from function.aoai_calls import get_sql_query
 load_dotenv(override=True)
 
 # variable
-api_endpoint = "http://localhost:8000/api/v1"
-
-def create_booklet():
-    st.session_state["stage"] = "final_parameters"
-
-def final_parameters():
-    st.session_state["stage"] = "story_generation"
+api_endpoint = os.getenv("API_ENDPOINT")
 
 #sessions
 if "stage" not in st.session_state:
@@ -45,20 +39,20 @@ else:
 if "aoai_responding" not in st.session_state:
     st.session_state["aoai_responding"] = False
 if "aoai_response" not in st.session_state:
-    st.session_state["ai_response"] = {}
+    st.session_state["aoai_response"] = {}
 
 if st.session_state["stage"] == "ai_search_index":
     with st.container():
         # text box for user to input search query with label
         search_endpoint = st.text_input(
             "Azure AI Search Endpoint",
-            value="https://jhl-search-s1.search.windows.net"
+            value=""
         )
         # password input for search_key
         search_key = st.text_input("Azure AI Search API Key", type="password")
         search_index = st.text_input(
             "Azure AI Search Index Name",
-            value="adventureworks"
+            value=""
         )
 
         if st.button("Check AI Search"):
@@ -72,7 +66,6 @@ if st.session_state["stage"] == "ai_search_index":
                 }
                 st.info("Checking AI Search Index...")
                 index_ready = checking_ai_search_index(st.session_state["aisearch_info"])
-                print(index_ready)
                 if index_ready == "ready":
                     st.session_state["stage"] = "chat_with_ai"
                     st.success("Index is ready")
@@ -96,7 +89,7 @@ elif st.session_state["stage"] == "index_database":
         st.write('Azure Openai Information')
         aoai_endpoint = st.text_input(
             "Azure OpenAI Endpoint",
-            value="https://jhl-aoai-west.openai.azure.com/"
+            value=""
         )
         aoai_key = st.text_input(
             "Azure OpenAI API Key",
@@ -104,11 +97,11 @@ elif st.session_state["stage"] == "index_database":
         )
         aoai_model_deployment = st.text_input(
             "Azure OpenAI Model Deployment",
-            value="gpt-4o-global"
+            value=""
         )
         aoai_embedding_deployment = st.text_input(
             "Azure OpenAI Embedding Deployment",
-            value="text-embedding-3-small"
+            value=""
         )
         st.divider()
         st.write('Database Information')
@@ -118,15 +111,15 @@ elif st.session_state["stage"] == "index_database":
         )
         db_server = st.text_input(
             "Database Server",
-            value="jhl-sql-server.database.windows.net"
+            value=""
         )
         db_name = st.text_input(
             "Database Name",
-            value="jhl-sql-db-sample"
+            value=""
         )
         db_username = st.text_input(
             "Database Username",
-            value="jhladmin"
+            value=""
         )
         db_password = st.text_input(
             "Database Password",
@@ -215,6 +208,7 @@ elif st.session_state["stage"] == "chat_with_ai":
                 col1, col2 = st.columns([7.5, 1.5])
                 with col1:
                     user_question = st.text_input("Generate SQL from database...")
+                    display_cot = st.checkbox("Display Chain of Thought")
                 with col2:
                     if st.button("Ask"):
                         st.session_state["aoai_responding"] = True
@@ -223,11 +217,24 @@ elif st.session_state["stage"] == "chat_with_ai":
                             "api_key": chat_aoai_key,
                             "model_deployment": chat_aoai_model_deployment
                         }
-                        st.session_state["ai_response"] = get_sql_query(
+                        st.session_state["aoai_response"] = get_sql_query(
                             aisearch_info=st.session_state["aisearch_info"],
                             aoai_info=st.session_state["aoai_info"],
                             user_question=user_question
                         )
+                        # adding user question to session state aoai_response
+                        st.session_state["aoai_response"]["user_question"] = user_question
                 # Chat with AI
                 with st.container():
-                    st.write(st.session_state["ai_response"])
+                    if st.session_state["aoai_response"]:
+                        st.divider()
+                        st.write("User Question")
+                        st.write(st.session_state["aoai_response"].get("user_question"))
+                        st.divider()
+                        st.write("SQL Query")
+                        st.write(st.session_state["aoai_response"].get("sql_query"))
+                        if display_cot:
+                            st.divider()
+                            st.write("Chain of Thought")
+                            st.write(st.session_state["aoai_response"].get("chain_of_thought"))
+ 

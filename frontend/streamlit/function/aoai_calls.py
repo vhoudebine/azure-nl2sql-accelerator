@@ -1,8 +1,10 @@
 import os 
 import requests
+from dotenv import load_dotenv
 
-# variable
-api_endpoint = "http://localhost:8000/api/v1"
+load_dotenv(override=True)
+
+api_endpoint = f"{os.getenv('API_ENDPOINT')}/api/v1"
 
 def get_sql_query(aisearch_info, aoai_info, user_question):
 
@@ -16,6 +18,7 @@ def get_sql_query(aisearch_info, aoai_info, user_question):
         f"{api_endpoint}/aoai/sql-query",
         json=body
     )
+    print(f"response code from get_sql_query: {response.status_code}")
     if response.status_code == 200:
         return response.json()
     elif response.status_code == 423:

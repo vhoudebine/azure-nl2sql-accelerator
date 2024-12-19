@@ -162,7 +162,7 @@ router = APIRouter(
 
 @router.get("/")
 def main():
-    return {"message": "running get"}
+    return {"message": "running get aoai"}
 
 
 @router.post("/sql-query")
@@ -192,6 +192,11 @@ def get_sql_query(obj: dict, request: Request):
 
     result = sql_query_from_llm(aoai_info=aoai_info, tables_prompt=search_docs, user_question=updated_user_question)
     print(result)
+
+    # adding search information as well as rewritten prompt to the result
+    # result["search_docs"] = search_docs
+    result["rewritten_prompt"] = updated_user_question
+
     return result
     
 

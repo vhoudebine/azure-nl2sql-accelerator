@@ -11,7 +11,7 @@ from fastapi.responses import StreamingResponse
 
 task_lock = threading.Lock()
 
-def cpu_intensive_task(param):
+def simulate_task(param):
     for i in range(30):
         print(f"i: {i}")
         time.sleep(1)
@@ -47,21 +47,7 @@ async def get_task_status():
 def post_test(obj: dict):
     return {"message": f"POST test with data {obj}"}
 
-@router.post("/aoai")
-async def post_test_aoai(obj: dict, request: Request):
-    user_prompt = obj["user_prompt"]
-    aoai_client = request.app.state.aoai_client
-    resp = aoai_client.aoai_completion_simple(user_prompt)
-    return {"message": resp}
-
-@router.post("/aoai-stream")
-async def post_test_aoai(obj: dict, request: Request):
-    # return {"message": "Not implemented yet"}
-    user_prompt = obj["user_prompt"]
-    aoai_client = request.app.state.aoai_client
-    return StreamingResponse(aoai_client.aoai_completion_simple_stream(user_prompt), media_type="text/event-stream")
-
-@router.post("/long-running-task", status_code=202)
+@router.post("/simulate-task", status_code=202)
 async def long_running_task(background_tasks: BackgroundTasks, param: int):
     print("Endpoint received request")
     
@@ -71,7 +57,7 @@ async def long_running_task(background_tasks: BackgroundTasks, param: int):
     
     try:
         task_lock.acquire(blocking=False)
-        background_tasks.add_task(cpu_intensive_task, param)
+        background_tasks.add_task(simulate_task, param)
     except:
         if task_lock.locked():
             task_lock.release()

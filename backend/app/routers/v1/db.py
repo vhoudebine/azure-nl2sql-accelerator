@@ -152,8 +152,8 @@ def main():
 
 @router.get("/test")
 async def test_aoai(request: Request):
-    db_client = request.app.state.db_client
-    return db_client.list_database_tables()
+    # this will change to test the connection to the database and get list of tables
+    return {"message": "testing db"}
 
 @router.get("/index-database-status")
 async def get_task_status():
