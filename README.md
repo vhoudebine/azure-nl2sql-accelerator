@@ -1,5 +1,31 @@
 # azure-nl2sql-accelerator
-Accelerator to interact with database in natural language
+Accelerator to interact with database in natural language using Azure OpenAI models.
+
+This repository demonstrates a robust implementation of NL2SQL that injects rich table metadata into the LLM prompt through RAG to help improve SQL query generation.
+
+This approach is different from traditional Agentic approaches that rely on just-in-time database exploration to generate SQL queries.
+
+The process consists of two parts:
+- **Offline**: Generate rich metadata about the database tables (column names, description, sample values, column type etc) and store these in a vector database (Azure AI Search)
+- **Online**: When a question is asked, only the metadata for the most relevant tables based on the question is retrieved from the vector store and fed to the LLM to improve query accuracy.
+
+
+![Architecture Diagram](static/diagram.png)
+
+**This respository has 4 main components:**
+- the `sqltoolkit` library has utilities for offline metadata generation from a database ([sqltoolkit](sqltoolkit))
+- A backend app exposing API endpoints to index the data and generate SQL ([backend](backend))
+- A Sample front end streamlit app for demo purposes ([frontend](frontend))
+- Quickstart notebooks for interactive testing: 
+    - [quickstart_azure_sql_.ipynb](quickstart_azure_sql_.ipynb)
+    - [quickstart_postgres.ipynb](quickstart_postgres.ipynb)
+
+## Pre-requisites
+The repository currently supports Azure SQL and PostgreSQL connections, with more coming.
+
+- An Azure OpenAI resource with a gpt-4o, gpt-4o-mini and text-embedding-3-small deployment
+- An Azure AI Search resource
+- the odbc drivers for the databases should be installed and set-up in the environment running the code
 
 ## Sqltoolkit
 `sqltoolkit` is a Python library for interacting with SQL databases, providing tools for connecting to databases, executing queries, and indexing data for Azure AI Search.
@@ -26,8 +52,12 @@ pip install -r requirements.txt
 from sqltoolkit.connectors import AzureSQLConnector, PostgreSQLConnector
 from sqltoolkit.client import DatabaseClient
 
-# Azure SQL Connection
+# Azure SQL Connection using entra ID
 azure_connector = AzureSQLConnector(server='your_server', database='your_database')
+sql_client = DatabaseClient(azure_connector)
+
+# Azure SQL Connection using password
+azure_connector = AzureSQLConnector(server='your_server', database='your_database', use_entra_id=False, user='your_user', password='your_password')
 sql_client = DatabaseClient(azure_connector)
 
 # PostgreSQL Connection
@@ -54,7 +84,7 @@ from sqltoolkit.indexer import DatabaseIndexer
 from azure.identity import DefaultAzureCredential
 
 # Initialize the indexer
-indexer = DatabaseIndexer(client=sql_client, openai_client=openai_client, aoai_deployment='your_deployment')
+indexer = DatabaseIndexer(client=sql_client, openai_client=openai_client, aoai_deployment='your_deployment', embedding="text-embedding-3-small")
 
 # Fetch and describe tables
 table_manifests = indexer.fetch_and_describe_tables()
