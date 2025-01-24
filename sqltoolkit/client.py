@@ -2,6 +2,7 @@ import json
 import pandas as pd
 import warnings
 from sqltoolkit import sql_queries
+import datetime
 
 warnings.filterwarnings('ignore')
   
@@ -13,7 +14,7 @@ class DatabaseClient:
     @staticmethod  
     def convert_datetime_columns_to_string(df: pd.DataFrame) -> pd.DataFrame:  
         for column in df.columns:  
-            if pd.api.types.is_datetime64_any_dtype(df[column]):  
+            if pd.api.types.is_datetime64_any_dtype(df[column]) or any(isinstance(x, datetime.date) for x in df[column]):  
                 df[column] = df[column].astype(str)  
         return df  
   
