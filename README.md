@@ -17,8 +17,9 @@ The process consists of two parts:
 - A backend app exposing API endpoints to index the data and generate SQL ([backend](backend))
 - A Sample front end streamlit app for demo purposes ([frontend](frontend))
 - Quickstart notebooks for interactive testing: 
-    - [quickstart_azure_sql_.ipynb](quickstart_azure_sql_.ipynb)
-    - [quickstart_postgres.ipynb](quickstart_postgres.ipynb)
+    - [quickstart_azure_sql_.ipynb](./notebooks/quickstart_azure_sql_.ipynb)
+    - [quickstart_postgres.ipynb](./notebooks/quickstart_postgres.ipynb)
+    - [quickstart_snowflake.ipynb](./notebooks/quickstart_snowflake.ipynb)
 
 ## Pre-requisites
 The repository currently supports Azure SQL and PostgreSQL connections, with more coming.
@@ -49,7 +50,7 @@ pip install -r requirements.txt
 #### Connecting to a Database
 
 ```python
-from sqltoolkit.connectors import AzureSQLConnector, PostgreSQLConnector
+from sqltoolkit.connectors import AzureSQLConnector, PostgreSQLConnector, SnowflakeConnector
 from sqltoolkit.client import DatabaseClient
 
 # Azure SQL Connection using entra ID
@@ -63,6 +64,13 @@ sql_client = DatabaseClient(azure_connector)
 # PostgreSQL Connection
 postgres_connector = PostgreSQLConnector(host='your_host', database='your_database', user='your_user', password='your_password')
 sql_client = DatabaseClient(postgres_connector)
+
+# SnowflakeSQL Connection
+snowflake_connector = SnowflakeConnector(
+    user='your_user', password='your_password', account='your_account',
+    warehouse='your_warehouse', database='your_database', schema='your_schema'
+)
+sql_client = DatabaseClient(snowflake_connector)
 ```
 
 #### Executing Queries

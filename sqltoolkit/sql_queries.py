@@ -110,12 +110,55 @@ ORDER BY
     LIMIT 10"""
 }
 
+SNOWFLAKE_QUERIES = {
+    'list_database_tables': """SELECT table_schema || '.' || table_name AS TABLE_NAME 
+FROM information_schema.tables 
+WHERE table_type = 'BASE TABLE' 
+  AND table_schema NOT IN ('INFORMATION_SCHEMA', 'SNOWFLAKE', 'SNOWFLAKE_SAMPLE_DATA')""",
+
+    'get_table_schema': lambda table_name: f"""
+SELECT  
+    cols.COLUMN_NAME AS "name",  
+    cols.DATA_TYPE AS "type",  
+    cols.IS_NULLABLE,  
+    cols.COMMENT AS "column_description",  
+    CASE  
+        WHEN pk.CONSTRAINT_TYPE = 'PRIMARY KEY' THEN 'PRIMARY KEY'
+        ELSE NULL
+    END AS "key_type",
+
+FROM  
+    INFORMATION_SCHEMA.COLUMNS AS cols
+LEFT JOIN (
+    SELECT tc.TABLE_SCHEMA, tc.TABLE_NAME, tc.CONSTRAINT_TYPE
+    FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS tc
+    WHERE tc.CONSTRAINT_TYPE = 'PRIMARY KEY'
+) pk
+    ON cols.TABLE_SCHEMA = pk.TABLE_SCHEMA
+    AND cols.TABLE_NAME = pk.TABLE_NAME
+WHERE  
+    cols.TABLE_SCHEMA ||'.'|| cols.TABLE_NAME = '{table_name}'
+ORDER BY  
+    cols.ORDINAL_POSITION;""",
+
+    'get_table_rows': lambda table_name: f"SELECT * FROM {table_name} LIMIT 3",
+
+    'get_column_values': lambda table_name, column_name: f"""
+SELECT DISTINCT 
+    "{column_name}"
+FROM {table_name}
+ORDER BY "{column_name}"
+LIMIT 10"""
+}
+
 # Function to get the appropriate query based on database type and query name
 def get_query(db_type: str, query_name: str, **kwargs) -> str:
     if db_type == 'AZURE_SQL':
         queries = AZURE_SQL_QUERIES
     elif db_type == 'POSTGRESQL':
         queries = POSTGRESQL_QUERIES
+    elif db_type == 'SNOWFLAKE':
+        queries = SNOWFLAKE_QUERIES
     else:
         raise ValueError(f"Unsupported database type: {db_type}")
 
