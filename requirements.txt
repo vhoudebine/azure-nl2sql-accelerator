@@ -10,3 +10,4 @@ azure-search-documents==11.6.0b7
 psycopg2-binary
 sqlparse
 sql_metadata
+snowflake-connector-python

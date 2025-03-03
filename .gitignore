@@ -259,3 +259,10 @@ evaluation/documentation/toxicology/database_description/connected.csv:Zone.Iden
 evaluation/documentation/toxicology/database_description/molecule.csv
 evaluation/documentation/toxicology/database_description/molecule.csv:Zone.Identifier
 evaluation/documentation/toxicology/database_description/molecule.csv:Zone.Identifier:Zone.Identifier
+app.py
+evaluation/benchmark.ipynb
+evaluation/mini_dev_postgresql_evaluated_20250124_225147_with_ground_truth_and_pred.csv
+evaluation/mini_dev_postgresql_evaluated_20250124_225147_with_ground_truth.csv
+evaluation/mini_dev_postgresql_evaluated_20250124_225147.csv
+evaluation/mini_dev_postgresql_evaluated_final.csv
+evaluation/mini_dev_postgresql_evaluated.csv

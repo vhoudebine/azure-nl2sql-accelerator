@@ -4,6 +4,8 @@ import pyodbc
 from azure.identity import DefaultAzureCredential
 import psycopg2
 from psycopg2 import OperationalError
+import snowflake.connector
+
 
 class AzureSQLConnector:
     def __init__(self, server: str, database: str, use_entra_id: bool = True, username: str = None, password: str = None):
@@ -53,3 +55,44 @@ class OdbcConnector:
             return conn
         except pyodbc.Error as e:
             raise RuntimeError(f"Error connecting to Database: {e}")
+
+class SnowflakeConnector:
+    def __init__(self, user: str, password: str, account: str, warehouse: str, database: str, schema: str, role: str = None, **kwargs):
+        """
+        Initialize a Snowflake connector.
+        
+        Required parameters:
+          - user: Snowflake username.
+          - password: Snowflake password.
+          - account: Snowflake account identifier.
+          - warehouse: Warehouse name.
+          - database: Database name.
+          - schema: Schema name.
+        
+        Optional:
+          - role: Snowflake role.
+          - kwargs: Additional parameters for snowflake.connector.connect.
+        """
+        self.type = 'SNOWFLAKE'
+        self.connection_params = {
+            'user': user,
+            'password': password,
+            'account': account,
+            'warehouse': warehouse,
+            'database': database,
+            'schema': schema,
+        }
+        if role:
+            self.connection_params['role'] = role
+        # Include any additional optional parameters
+        self.connection_params.update(kwargs)
+    
+    def get_conn(self):
+        """
+        Establish and return a connection to Snowflake.
+        """
+        try:
+            conn = snowflake.connector.connect(**self.connection_params)
+            return conn
+        except Exception as e:
+            raise RuntimeError(f"Error connecting to Snowflake: {e}")
